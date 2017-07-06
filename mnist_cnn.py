@@ -14,31 +14,9 @@ from keras import backend as K
 # input image dimensions
 img_rows, img_cols = 28, 28
 num_classes = 10
+num_hidden_layer = 128
 
-def mnist_cnn():
-    if K.image_data_format() == 'channels_first':
-        input_shape = (1, img_rows, img_cols)
-    else:
-        input_shape = (img_rows, img_cols, 1)
-
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax', name='pred10'))
-
-    return model
-
-def train_mnist(model):
-    batch_size = 128
-    epochs = 1
-
+def load_data():
     # the data, shuffled and split between train and test sets
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -53,13 +31,42 @@ def train_mnist(model):
     x_test = x_test.astype('float32')
     x_train /= 255
     x_test /= 255
-    print('x_train shape:', x_train.shape)
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
 
     # convert class vectors to binary class matrices
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
+
+    return (x_train, y_train), (x_test, y_test)
+
+def mnist_cnn():
+    if K.image_data_format() == 'channels_first':
+        input_shape = (1, img_rows, img_cols)
+    else:
+        input_shape = (img_rows, img_cols, 1)
+
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3),
+                     activation='relu',
+                     input_shape=input_shape,
+                     name='conv1'))
+    model.add(Conv2D(64, (3, 3), activation='relu',
+        name='conv2'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(num_hidden_layer, activation='relu',
+        name='conv3'))
+    model.add(Dropout(0.5))
+    model.add(Dense(num_classes, activation='softmax', name='conv4'))
+
+    return model
+
+def train_mnist(model):
+    batch_size = 128
+    epochs = 1
+
+    (x_train, y_train), (x_test, y_test) = load_data()
+
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
