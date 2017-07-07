@@ -62,7 +62,7 @@ def mnist_fcn():
 
 def train(model=None):
     batch_size = 128
-    epochs = 5
+    epochs = 10
     if model is None:
         model = mnist_fcn()
 
@@ -102,22 +102,28 @@ def test(model):
     print('Test accuracy:', score[1])
 
     # create arbitrary size image with arbitrary numbers
-    x = np.random.randint(10) + 1
-    y = np.random.randint(10) + 1
-    ans = np.zeros((x, y)).astype(np.int32)
-    indices = np.zeros((x, y)).astype(np.int32)
+    x = np.random.randint(5) + 1
+    y = np.random.randint(5) + 1
+    ans = np.zeros((y, x)).astype(np.int32)
+    indices = np.zeros((y, x)).astype(np.int32)
+    test_img = np.zeros((1, y*img_rows, x*img_cols, 1), dtype=np.float32)
     for idx in range(x*y):
         row = idx/x
         col = idx%x
-        indices[row,col] = np.random.randint(len(y_test))
-        ans[row,col] = np.argmax(y_test[indices[row,col]].reshape(-1))
+        i = np.random.randint(len(y_test))
+        indices[row,col] = i
+        ans[row,col] = np.argmax(y_test[i].reshape(-1))
+        test_img[0,row*img_rows:(row+1)*img_rows,col*img_cols:(col+1)*img_cols] = x_test[i,:,:]
 
-    if K.image_data_format() == 'channels_first':
-        image = np.zeros((1, 1, img_rows*y, img_cols*x)).astype(np.float32)
-    else:
-        image = np.zeros((1, img_rows*y, img_cols*x, 1)).astype(np.float32)
-
+    pred = model.predict(test_img)
+    print np.argmax(pred, axis=3)
+    print
+    print ans
 
 if __name__ == '__main__':
-    model = train()
+    if not isfile('mnist_fcn.h5'):
+        model = train()
+    else:
+        model = load_model('mnist_fcn.h5')
+    test(model)
 
