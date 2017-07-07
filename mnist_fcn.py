@@ -11,21 +11,20 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
 from keras.models import load_model
 from os.path import isfile
-from mnist_cnn import mnist_cnn, train_mnist, num_classes, num_hidden_layer, load_data
+from mnist_cnn import mnist_cnn, train_mnist, num_classes, num_hidden_layer, load_data, img_rows, img_cols
 import numpy as np
 
 def transfer_weights(model_path='mnist_cnn.h5'):
     if not isfile(model_path):
         train_mnist(mnist_cnn())
-    
+
     model_fcn = mnist_fcn()
     model_cnn = load_model(model_path)
     index = {}
     for layer in model_fcn.layers:
         if layer.name:
             index[layer.name] = layer
-
-    for layer in model_cnn.layers:
+    for layer in model_cnn.layers: 
         weights = layer.get_weights()
         if layer.name == 'conv3' or layer.name == 'conv4':
             weights[0] = np.reshape(weights[0], index[layer.name].get_weights()[0].shape)
@@ -37,7 +36,7 @@ def transfer_weights(model_path='mnist_cnn.h5'):
                   metrics=['accuracy'])
     model_fcn.save('mnist_fcn.h5')
     return model_fcn
-            
+
 
 def mnist_fcn():
     if K.image_data_format() == 'channels_first':
@@ -61,10 +60,38 @@ def mnist_fcn():
 
     return model
 
+def train(model=None):
+    batch_size = 128
+    epochs = 5
+    if model is None:
+        model = mnist_fcn()
 
-if __name__ == '__main__':
-    model = transfer_weights()
+    (x_train, y_train), (x_test, y_test) = load_data()
+    if K.image_data_format() == 'channels_first':
+        y_train = y_train.reshape((-1, num_classes, 1, 1))
+        y_test = y_test.reshape((-1, num_classes, 1, 1))
+    else:
+        y_train = y_train.reshape((-1, 1, 1, num_classes))
+        y_test = y_test.reshape((-1, 1, 1, num_classes))
 
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.Adadelta(),
+                  metrics=['accuracy'])
+
+    model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              validation_data=(x_test, y_test))
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+
+    model.save('mnist_fcn.h5')
+    return model
+    
+
+def test(model):
     (x_train, y_train), (x_test, y_test) = load_data()
     if K.image_data_format() == 'channels_first':
         y_test = y_test.reshape((-1, num_classes, 1, 1))
@@ -73,3 +100,24 @@ if __name__ == '__main__':
     score = model.evaluate(x_test, y_test)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
+
+    # create arbitrary size image with arbitrary numbers
+    x = np.random.randint(10) + 1
+    y = np.random.randint(10) + 1
+    ans = np.zeros((x, y)).astype(np.int32)
+    indices = np.zeros((x, y)).astype(np.int32)
+    for idx in range(x*y):
+        row = idx/x
+        col = idx%x
+        indices[row,col] = np.random.randint(len(y_test))
+        ans[row,col] = np.argmax(y_test[indices[row,col]].reshape(-1))
+
+    if K.image_data_format() == 'channels_first':
+        image = np.zeros((1, 1, img_rows*y, img_cols*x)).astype(np.float32)
+    else:
+        image = np.zeros((1, img_rows*y, img_cols*x, 1)).astype(np.float32)
+
+
+if __name__ == '__main__':
+    model = train()
+
