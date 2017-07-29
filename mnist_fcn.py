@@ -6,7 +6,7 @@ Gets to 99.25% test accuracy after 12 epochs
 
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Dense, Dropout, Flatten, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Reshape
 from keras import backend as K
 from keras.models import load_model
@@ -43,17 +43,20 @@ def mnist_fcn(input_shape=(28, 28, 1)):
                      activation='elu',
                      input_shape=input_shape,
                      name='conv1', padding='same'))
+    model.add(BatchNormalization(axis=-1))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Conv2D(64, (3, 3), activation='elu', strides=1, padding='same',
         name='conv2'))
+    model.add(BatchNormalization(axis=-1))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
-
-    model.add(Conv2D(num_hidden_layer, (7, 7), activation='elu', strides=1, padding='valid',
-        name='conv3'))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Conv2D(num_hidden_layer, kernel_size=(7,7), activation='elu', strides=(1,1), padding='valid', name='conv3'))
+    model.add(BatchNormalization(axis=-1))
     model.add(Dropout(0.5))
-    model.add(Conv2D(num_classes, (1, 1), activation='softmax', name='conv4'))
+    model.add(Conv2D(num_classes, kernel_size=(1,1), activation='softmax'))
     model.add(Reshape((num_classes,)))
+
     print
     print 'FCN!!!!!!!!!'
     print
