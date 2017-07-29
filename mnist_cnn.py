@@ -10,6 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
+import numpy as np
 
 # input image dimensions
 img_rows, img_cols = 28, 28
@@ -46,15 +47,16 @@ def mnist_cnn():
 
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
+                     activation='elu',
                      input_shape=input_shape,
-                     name='conv1'))
-    model.add(Conv2D(64, (3, 3), activation='relu',
-        name='conv2'))
+                     name='conv1', padding='same'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='elu',
+        name='conv2', padding='same'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(num_hidden_layer, activation='relu',
+    model.add(Dense(num_hidden_layer, activation='elu',
         name='conv3'))
     model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax', name='conv4'))
@@ -84,4 +86,5 @@ def train_mnist(model):
 
 
 if __name__ == '__main__':
+    np.random.seed(0)
     train_mnist(mnist_cnn())

@@ -7,19 +7,18 @@ Gets to 99.25% test accuracy after 12 epochs
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D, Reshape
 from keras import backend as K
 from keras.models import load_model
 from os.path import isfile
 from mnist_cnn import mnist_cnn, train_mnist, num_classes, num_hidden_layer, load_data, img_rows, img_cols
 import numpy as np
 
-def transfer_weights(model_path='mnist_cnn.h5'):
-    if not isfile(model_path):
-        train_mnist(mnist_cnn())
+def transfer_weights(model_cnn=None):
+    if not model_cnn:
+        model_cnn = mnist_cnn()
 
     model_fcn = mnist_fcn()
-    model_cnn = load_model(model_path)
     index = {}
     for layer in model_fcn.layers:
         if layer.name:
@@ -31,50 +30,54 @@ def transfer_weights(model_path='mnist_cnn.h5'):
         if index.has_key(layer.name):
             index[layer.name].set_weights(weights)
 
-    model_fcn.compile(loss=keras.losses.categorical_crossentropy,
+    model_fcn.compile(loss=keras.losses.sparse_categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
     model_fcn.save('mnist_fcn.h5')
     return model_fcn
 
 
-def mnist_fcn():
-    if K.image_data_format() == 'channels_first':
-        input_shape = (1, None, None)
-    else:
-        input_shape = (None, None, 1)
-
+def mnist_fcn(input_shape=(28, 28, 1)):
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
+                     activation='elu',
                      input_shape=input_shape,
-                     name='conv1'))
-    model.add(Conv2D(64, (3, 3), activation='relu', strides=1, padding='valid',
+                     name='conv1', padding='same'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='elu', strides=1, padding='same',
         name='conv2'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
-    model.add(Conv2D(num_hidden_layer, (12, 12), activation='relu', strides=1, padding='valid',
+
+    model.add(Conv2D(num_hidden_layer, (7, 7), activation='elu', strides=1, padding='valid',
         name='conv3'))
     model.add(Dropout(0.5))
     model.add(Conv2D(num_classes, (1, 1), activation='softmax', name='conv4'))
+    model.add(Reshape((num_classes,)))
+    print
+    print 'FCN!!!!!!!!!'
+    print
+    """
+    model.add(Flatten())
+    model.add(Dense(num_hidden_layer, activation='elu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(num_classes, activation='softmax'))
+    print 'CNN'
+    """
 
     return model
 
 def train(model=None):
     batch_size = 128
-    epochs = 10
+    epochs = 1
     if model is None:
         model = mnist_fcn()
 
     (x_train, y_train), (x_test, y_test) = load_data()
-    if K.image_data_format() == 'channels_first':
-        y_train = y_train.reshape((-1, num_classes, 1, 1))
-        y_test = y_test.reshape((-1, num_classes, 1, 1))
-    else:
-        y_train = y_train.reshape((-1, 1, 1, num_classes))
-        y_test = y_test.reshape((-1, 1, 1, num_classes))
+    y_train = np.argmax(y_train, axis=-1)
+    y_test = np.argmax(y_test, axis=-1)
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
+    model.compile(loss=keras.losses.sparse_categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
@@ -93,14 +96,13 @@ def train(model=None):
 
 def test(model):
     (x_train, y_train), (x_test, y_test) = load_data()
-    if K.image_data_format() == 'channels_first':
-        y_test = y_test.reshape((-1, num_classes, 1, 1))
-    else:
-        y_test = y_test.reshape((-1, 1, 1, num_classes))
+    y_test = np.argmax(y_test, axis=-1)
+
     score = model.evaluate(x_test, y_test)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
 
+    """
     # create arbitrary size image with arbitrary numbers
     x = np.random.randint(5) + 1
     y = np.random.randint(5) + 1
@@ -119,11 +121,10 @@ def test(model):
     print np.argmax(pred, axis=3)
     print
     print ans
+    """
 
 if __name__ == '__main__':
-    if not isfile('mnist_fcn.h5'):
-        model = train()
-    else:
-        model = load_model('mnist_fcn.h5')
+    np.random.seed(0)
+    model = train()
     test(model)
 
