@@ -51,7 +51,7 @@ def train_model(model):
     gen_test = get_batch(x_test, y_test, len(x_test))
     x_test, y_test = next(gen_test)
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
+    model.compile(loss=keras.losses.sparse_categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
     model.fit_generator(generator=gen, steps_per_epoch=steps_per_epochs,
@@ -73,13 +73,13 @@ def get_batch(x, y, batch_size):
             idx = indices[start:end]
 
             x_batch, temp = x[idx], y[idx]
-            y_batch = np.zeros((len(idx), 7, 7, 11), dtype=np.float32)
+            y_batch = np.zeros((len(idx), 7, 7), dtype=np.int64)
             for i in range(len(idx)):
-                y_batch[i,:,:,-1] = 1.
-                y_batch[i,2:5,2:5,-1] = 0.
-                y_batch[i,2:5,2:5,temp[i]] = 1.
+                y_batch[i,:,:] = 10
+                y_batch[i,2:5,2:5] = 0.
+                y_batch[i,2:5,2:5] = temp[i]
 
-            yield x_batch, y_batch.reshape(-1, 49, 11)
+            yield x_batch, y_batch.reshape(-1, 49)
 
 
 if __name__ == '__main__':
