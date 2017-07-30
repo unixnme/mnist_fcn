@@ -12,7 +12,7 @@ import numpy as np
 
 num_classes = 11
 batch_size = 128
-epochs = 1
+epochs = 10
 
 def create_model(input_shape=(28,28,1)):
     model = Sequential()
@@ -55,7 +55,10 @@ def train_model(model):
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
     model.fit_generator(generator=gen, steps_per_epoch=steps_per_epochs,
-                        validation_data=(x_test, y_test))
+                        validation_data=(x_test, y_test), epochs=epochs)
+
+    eval = model.evaluate(x_test, y_test, len(x_test))
+    print eval
 
     return model
 
