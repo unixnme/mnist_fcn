@@ -2,8 +2,8 @@
 import keras
 from keras import regularizers
 from keras.datasets.mnist import load_data
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, BatchNormalization
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Flatten, BatchNormalization, Input
 from keras.layers import Conv2D, MaxPooling2D, Reshape
 from keras.models import load_model
 from os.path import isfile
@@ -32,8 +32,7 @@ def create_model(input_shape=(28,28,1)):
                strides=(1, 1), padding='same', name='conv3'))
     # model.add(BatchNormalization(axis=-1))
     model.add(Dropout(0.5))
-    model.add(Conv2D(num_classes, kernel_size=(1, 1), activation='softmax'))
-    model.add(Reshape((49, num_classes,)))
+    model.add(Conv2D(num_classes, kernel_size=(1, 1), activation='softmax', name='conv4'))
 
     return model
 
@@ -57,8 +56,8 @@ def train_model(model):
     model.fit_generator(generator=gen, steps_per_epoch=steps_per_epochs,
                         validation_data=(x_test, y_test), epochs=epochs)
 
-    eval = model.evaluate(x_test, y_test, len(x_test))
-    print eval
+    score = model.evaluate(x_test, y_test, len(x_test))
+    print score
 
     return model
 
@@ -82,6 +81,52 @@ def get_batch(x, y, batch_size):
             yield x_batch, y_batch.reshape(-1, 49, 1)
 
 
+def test_model(model):
+    (x_train, y_train), (x_test, y_test) = load_data()
+    y_test = np.argmax(y_test, axis=-1)
+
+    # modify model to take variable-input
+    new_model = create_model(input_shape=(None, None, 1))
+    new_model = copy_weights(src=model, dst=new_model)
+
+    # create arbitrary size image with arbitrary numbers
+    x = np.random.randint(5) + 1
+    y = np.random.randint(5) + 1
+    ans = np.zeros((y, x)).astype(np.int32)
+    indices = np.zeros((y, x)).astype(np.int32)
+    test_img = np.zeros((1, y*img_rows, x*img_cols, 1), dtype=np.float32)
+    for idx in range(x*y):
+        row = idx/x
+        col = idx%x
+        i = np.random.randint(len(y_test))
+        indices[row,col] = i
+        ans[row,col] = y_test[i]
+        test_img[0,row*img_rows:(row+1)*img_rows,col*img_cols:(col+1)*img_cols] = x_test[i,:,:]
+
+    pred = new_model.predict(test_img)
+    print np.argmax(pred, axis=-1)
+    print
+    print ans
+    print
+
+
+def copy_weights(src, dst):
+    weights = {}
+    for layer in src.layers:
+        w = layer.get_weights()
+        if not w: continue
+        weights[layer.name] = w
+
+    for layer in dst.layers:
+        w = layer.get_weights()
+        if not w or not weights.has_key(layer.name):
+            continue
+        layer.set_weights(weights[layer.name])
+
+    return dst
+
 if __name__ == '__main__':
     model = create_model()
+    model = Model(model.input, Reshape((49, num_classes))(model.output))
     model = train_model(model)
+    test_model(model)
