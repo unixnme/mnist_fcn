@@ -85,19 +85,41 @@ def train(model=None):
     model.compile(loss=keras.losses.sparse_categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
-
+    steps_per_epoch = int(np.floor(len(x_train) / float(batch_size)))
+    model.fit_generator(get_batches(x_train, y_train, batch_size),
+                        steps_per_epoch=steps_per_epoch,
+                        epochs=epochs,
+                        verbose=1,
+                        validation_data=(x_test, y_test))
+    """
     model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
               validation_data=(x_test, y_test))
+    """
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
 
     model.save('mnist_fcn.h5')
     return model
-    
+
+def get_batches(x, y, batch_size):
+    # generator to yield batches
+    num_samples = len(x)
+    indices = np.arange(num_samples)
+    while True:
+        np.random.shuffle(indices)
+        for start in range(0, num_samples, batch_size):
+            end = min(num_samples, start + batch_size)
+            idx = indices[start:end]
+
+            x_batch = x[idx]
+            y_batch = y[idx]
+
+            yield x_batch, y_batch
+
 
 def test(model):
     (x_train, y_train), (x_test, y_test) = load_data()
