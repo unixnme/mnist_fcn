@@ -79,7 +79,7 @@ def get_batch(x, y, batch_size):
                 y_batch[i,2:5,2:5] = 0.
                 y_batch[i,2:5,2:5] = temp[i]
 
-            yield x_batch, y_batch.reshape(-1, 49)
+            yield x_batch, y_batch.reshape(-1, 49, 1)
 
 
 if __name__ == '__main__':
