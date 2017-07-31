@@ -7,7 +7,7 @@ from keras.layers import Dense, Dropout, Flatten, BatchNormalization, Input
 from keras.layers import Conv2D, MaxPooling2D, Reshape
 from keras.models import load_model
 from os.path import isfile
-from mnist_cnn import mnist_cnn, train_mnist, num_classes, num_hidden_layer, load_data, img_rows, img_cols
+from mnist_cnn import mnist_cnn, train_mnist, num_classes, num_hidden_layer, img_rows, img_cols
 import numpy as np
 
 num_classes = 11
@@ -39,8 +39,12 @@ def create_model(input_shape=(28,28,1)):
 
 def train_model(model):
     (x_train, y_train), (x_test, y_test) = load_data()
-    y_train = np.argmax(y_train, axis=-1)
-    y_test = np.argmax(y_test, axis=-1)
+    y_train = y_train.reshape(-1, 1)
+    y_test = y_test.reshape(-1, 1)
+    x_train = np.expand_dims(x_train, axis=-1).astype(np.float32)
+    x_test = np.expand_dims(x_test, axis=-1).astype(np.float32)
+    x_train = x_train / 255
+    x_test = x_test / 255
 
     training_epochs = 1
     num_train_examples = len(x_train)
