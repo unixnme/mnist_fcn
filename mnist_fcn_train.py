@@ -19,20 +19,28 @@ def create_model(input_shape=(28,28,1)):
     model.add(Conv2D(32, kernel_size=(3, 3),
                      activation='elu',
                      input_shape=input_shape,
-                     name='conv1', padding='same'))
+                     name='conv1', padding='same',
+                     kernel_initializer='zeros',
+                     bias_initializer='zeros'))
     # model.add(BatchNormalization(axis=-1))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Conv2D(64, (3, 3), activation='elu', strides=1, padding='same',
-                     name='conv2'))
+                     name='conv2',
+                     kernel_initializer='zeros',
+                     bias_initializer='zeros'))
     # model.add(BatchNormalization(axis=-1))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     # model.add(BatchNormalization(axis=-1))
     model.add(Conv2D(num_hidden_layer, kernel_size=(7, 7), activation='elu',
-               strides=(1, 1), padding='same', name='conv3'))
+               strides=(1, 1), padding='same', name='conv3',
+                     kernel_initializer='zeros',
+                     bias_initializer='zeros'))
     # model.add(BatchNormalization(axis=-1))
     model.add(Dropout(0.5))
-    model.add(Conv2D(num_classes, kernel_size=(1, 1), activation='softmax', name='conv4'))
+    model.add(Conv2D(num_classes, kernel_size=(1, 1), activation='softmax', name='conv4',
+                     kernel_initializer='zeros',
+                     bias_initializer='zeros'))
 
     return model
 
@@ -87,7 +95,12 @@ def get_batch(x, y, batch_size):
 
 def test_model(model):
     (x_train, y_train), (x_test, y_test) = load_data()
-    y_test = np.argmax(y_test, axis=-1)
+    y_train = y_train.reshape(-1, 1)
+    y_test = y_test.reshape(-1, 1)
+    x_train = np.expand_dims(x_train, axis=-1).astype(np.float32)
+    x_test = np.expand_dims(x_test, axis=-1).astype(np.float32)
+    x_train = x_train / 255
+    x_test = x_test / 255
 
     # modify model to take variable-input
     new_model = create_model(input_shape=(None, None, 1))
